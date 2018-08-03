@@ -1,0 +1,937 @@
+---
+title: "Udacity workbook"
+author: "Brad Velasquez"
+date: "7/24/2018"
+output: html_document
+---
+
+
+#### Udacity - Exploratory Data Analysis workbook ####
+##8.7.18
+To begin we will follow the example below. Look carefully at the syntax
+```{r}
+library(ggplot2)
+library(RColorBrewer)
+data(diamonds)
+qplot(data=diamonds, x=carat,y=price,color=cut) + scale_color_brewer(palette = 'Accent')
+
+
+
+getwd()
+setwd('~/Documents/exploratory-data-analysis')
+statesInfo<-read.csv('stateData.csv')
+subset(statesInfo, state.region==1)
+```
+
+
+For the syntax above we have the following relationship:
+dataSet[Row condition, column condition]
+ 
+If left blank, yields all columns
+```{r}
+statesInfo[statesInfo$state.region==1,]
+```
+
+Now to find subsets for illerteracy, highschool graduation rate from the `statesInfo` data set we compute the following 
+```{r}
+illiteracybracket<-statesInfo[statesInfo$illiteracy==0.5,]
+highschoolgradbracket <- statesInfo[statesInfo$highSchoolGrad>50,]
+qplot(data=statesInfo, x=state.region, y=illiteracy, color=statesInfo$highSchoolGrad) 
+```
+We now move onto the following data set
+# REDDIT DATA SET
+```{r}
+reddit<-read.csv("reddit.csv")
+str(reddit)
+```
+
+We call a `Factor` a variable which contains some categorical information, such as gender, age, etc.
+For example we can determine employment status as follows 
+```{r}
+table(reddit$employment.status)
+```
+
+The above yields a list of emplyomeny status entries. 
+```{r}
+summary(reddit$employment.status)
+levels(reddit$age.range)
+# notice 7 different ranges
+qplot(reddit$age.range)
+qplot(data=reddit, x=income.range)
+```
+We can rearrange the levels so that the graph is easier to read/more cogent.
+```{r}
+reddit$age.range<-ordered(reddit$age.range, levels=c('Under 18', '18-24', '25-34', '35-44', '45-54', '55-64','65 or Above', 'NA'))
+qplot(data=reddit, x=age.range)
+```
+
+Now the data is rearranged as required. 
+
+Alternatively, we can rearrange the data as follows 
+```{r}
+reddit$age.range <- factor(reddit$age.range, levels=c('Under 18', '18-24', '25-34', '35-44', '45-54', '55-64','65 or Above', 'NA'), ordered = T)
+```
+
+Similarly, we can do the same for the income brackets. 
+```{r}
+reddit$income.range<-ordered(reddit$age.range, levels=c("Under $20,000", '$20,000 - $29,999', '$30,000 - $39,999', '$40,000 - $49,999', '$50,000 - $69,999', '$70,000 - $99,999', '$100,000 - $149,999', '$150,000 or more', 'NA'))
+qplot(data=reddit, x=income.range)
+```
+#Lesson 3 - exploring one variable
+First I downloaded the pseudo-facebook data, which is found in the `EDA` folder
+We can see the current working directory with the following command 
+
+```{r}
+getwd()
+```
+
+To change the directory  we use the following command
+
+```{r}
+setwd('~/Documents/exploratory-data-analysis')
+list.files()
+
+pf<-read.csv('pseudo_facebook.tsv', sep='\t')
+names(pf)
+```
+
+Notice that the pseudo_facebook data is actually a TAB separated file (`.tsv`). Therefore, we must use the following command. 
+
+This data set was created by Udacity, so the stats may not align.
+
+To begin the analysis, we start by looking at birth dates of pseudo-facebook users.
+
+```{r}
+library(ggplot2)
+#install.packages('ggthemes', dependencies = TRUE)
+library(ggthemes)
+names(pf)
+```
+A histogram of days of the month that individuals were born on is given by the command below
+ 
+```{r}
+ggplot(aes(x = dob_day), data = pf) +
+  geom_histogram(binwidth = 1) +
+  scale_x_continuous(breaks = 1:31)
+```
+To motivate what we are actually going ot do with the data consider the following questions:
+##Q: Do users perception of their audience actually match their audience.
+This is an interesting question because it depends on how a user presents themselve. 
+The survey asked: "How many people do you think saw this post?"
+As the researcher tells us, the gap betweeen expectation and reality was apparent, as people actually underestimated audience size. 
+
+
+Now we begin to move into a discussion of `ggplot`
+While using the `ggplot` enviorment, the `+` sign indicates a layer of a plot or graph. We can add a variety of layers, such as `geom_point()` for scatter plots, `geom_line` for line plots, or nothing for a histogram. 
+
+Now we add `facet_wrap` function to break up the data into months.
+Also, note that the `aes` is necessary for the `ggplot` functions.
+
+```{r}
+ggplot(aes(x = dob_day), data = pf) +
+  geom_histogram(binwidth = 1) +
+  scale_x_continuous(breaks = 1:31) +
+  facet_wrap(~dob_month,ncol=4)
+```
+
+
+Notice that changing `ncol=n`, yields a different number of columns, i.e. `3` or `4`, etc.
+Syntax `facet_wrap(~variable)`
+
+# Handling outliers 
+
+The following code will produce a histogram of the number of the friend count.
+```{r}
+qplot(x=friend_count, data=pf) 
+```
+
+Furthermore, we can limit the range of the x axis with the following code
+
+```{r}
+qplot(x=friend_count, data=pf, xlim=c(0,1000)) 
+```
+Or rather
+```{r}
+qplot(x=friend_count, data=pf) + 
+  scale_x_continuous(limit=c(0,1000))
+```
+Notice the bin width error produced.
+#adding the following command then yields
+
+```{r}
+qplot(x=friend_count, data=pf, binwidth=25) + 
+  scale_x_continuous(limit=c(0,1000), breaks=seq(0,1000,50)) 
+```
+This makes the distribution a bit easier to read. 
+
+##Data question: Which gender tends to have more friends? 
+A: We can see this by computing the following data. 
+```{r}
+qplot(x=friend_count, data=pf, binwidth=25) + 
+  scale_x_continuous(limit=c(0,1000), breaks=seq(0,1000,50)) +
+  facet_grid(~gender)
+```
+In this example, gender is the splitting variable in the `facet_grid`. 
+
+Notice in the above that we got three columns, since there was some missing data which R interprets as NA.
+ To look at just the two genders, we can run the following code
+```{r}
+ggplot(aes(x = friend_count), data = subset(pf, !is.na(gender))) +
+  geom_histogram() +
+  scale_x_continuous(limits = c(0, 1000), breaks = seq(0, 1000, 50)) +
+  facet_wrap(~gender)
+```
+
+Note we caould us omit.na(), too, but it is a bit more problematic since it could remove more than we intended.
+
+Now we want to determine who has more friends on average. To see this run the table command to see if there are more or less men v women.
+```{r}
+table(pf$gender)
+```
+
+This `table` tells us that there are female 40254 and  male 58574
+Moreover, the function below runs the summary function
+```{r}
+by(pf$friend_count,pf$gender,summary)
+```
+The function above applies a function to both the first and second 
+
+
+#NOW WE WILL ADD COLORS!!!!!
+
+To begin, consider the following plot
+
+```{r}
+ggplot(aes(x = tenure), data = pf) +
+  geom_histogram(binwidth = 30, color = 'black', fill = '#099DD9')
+```
+Where `tenure` is the number of days that a person has been a member of pseudo-facebook 
+
+Rescaling the tenure to years we obtain the following plot 
+```{r}
+qplot(x=tenure/365, data=pf, binwidth=1/12, color = I('black'), fill = I('#099DD9'), ylab='tenure', xlab='years')+ 
+  scale_x_continuous(seq(1,7,1), limits = c(0,7))
+```
+Further adjusting the data we obtain
+
+```{r}
+qplot(x=age, data=pf, binwidth=1, color = I('black'), fill = I('#099DD9')) +
+  scale_x_continuous(seq(5,110,5), limits = c(5,110))
+```
+
+#Transforming DATA
+Sometimes the data we obtain is very dispersed, i.e. tail heavy. 
+
+To see this consider the `log` transform of the following data. Since the order of magnitude is `10^n`, it makes sense to take the `log` to collect similar data points. 
+
+The motivation for doing this is so we can get a normally distributed data set. 
+If the resulting data is normally distributed then we have more statistical tools at out disposal.
+
+```{r}
+qplot(x=friend_count, data=pf)
+summary(pf$friend_count)
+summary(log10(pf$friend_count+1))
+```
+Notice that we added `1` so that the `log` is well defined
+
+We can also use other transformations, such as the `sqrt`, or natural `log`
+```{r}
+summary(sqrt(pf$friend_count))      
+```
+
+Now try to add all three plots to a single page. 
+To do this, first install the following page called `gridExtra`, and store the individual plots as follows.
+
+```{r}
+#install.packages('gridExtra')
+library(gridExtra)
+p1<-qplot(x=friend_count, data=pf)
+p2<-qplot(x=log10(friend_count+1), data=pf)
+p3<-qplot(x=sqrt(friend_count),data=pf)
+grid.arrange(p1,p2,p3)
+```
+
+Alternatively, we can plot this as follows 
+```{r}
+p1<-ggplot(aes(x=friend_count), data=pf) + geom_histogram()
+p2<-p1+scale_x_log10()
+p3<-p1+scale_x_sqrt()
+grid.arrange(p1,p2,p3)
+```
+
+#Difference between qplot and ggplot
+There are some subtle difference in how `qplot` and `ggplot` work, so we will compare below.
+
+```{r}
+logScale<-qplot(x=log10(friend_count+1), data=pf)
+countScale<-ggplot(aes(x=friend_count), data=pf) + geom_histogram() +scale_x_log10()
+grid.arrange(logScale,countScale, ncol = 2)
+```
+
+#FREQUENCY POLYGON
+Now we will start constructing frequency polygons. 
+In `qplot` the syntax is:
+```{r}
+qplot(x=friend_count, data= subset(pf,!is.na(gender)), binwidth=10, geom='freqpoly', color=gender) +
+  scale_x_continuous(lim=c(0,1000), breaks=seq(0,1000,50))
+```
+Notice that we added `geom` and `color` functions. 
+
+In `ggplot` the syntax is 
+```{r}
+ggplot(aes(x = friend_count, y = ..count../sum(..count..)),
+       data = subset(pf, !is.na(gender))) +
+  geom_freqpoly(aes(color = gender), binwidth=10) +
+  scale_x_continuous(limits = c(0, 1000), breaks = seq(0, 1000, 50)) +
+  xlab('Friend Count') +
+  ylab('Proportion of users with that friend count')
+```
+
+Next we will consider proportions of friend counts
+
+```{r}
+qplot(x=friend_count, y=..count../sum(..count..),
+      data= subset(pf,!is.na(gender)),
+      xlab='Friend Count',
+      ylab='Proportion of users w/ friend count',
+      binwidth=10, geom='freqpoly', color=gender) +
+  scale_x_continuous(lim=c(0,1000), breaks=seq(0,1000,50))
+```
+Notice the y axis count is different 
+
+Note that we can change `limits` and `breaks`
+
+#Looking at www_likes
+Consider the following plots
+```{r}
+qplot(x=www_likes,
+      data= subset(pf,!is.na(gender)),
+      geom='freqpoly', color=gender) +
+  scale_x_continuous()+
+  scale_x_log10()
+```
+We now numerically analyze the number of `www_likes` by `gender` as follows
+```{r}
+by(pf$www_likes,pf$gender, sum)
+```
+
+
+# BOX PLOTS
+Consider the following `freqpoly`.
+Notice we `subset` the data to eliminate the `na` `gender` entries.  
+```{r}
+qplot(x=friend_count, data= subset(pf,!is.na(gender)), binwidth=10, geom='freqpoly', color=gender) +
+  scale_x_continuous(lim=c(0,1000), breaks=seq(0,1000,50))
+qplot(geom='boxplot', data=subset(pf,!is.na(gender)),
+      x=gender,
+      y=log10(friend_count),
+      ylim=c(0,1000))
+```
+We now rescale the data so that the number of outliers is minimized,
+or we can use
+```{r}
+qplot(geom='boxplot', data=subset(pf,!is.na(gender)),
+      x=gender,
+      y=friend_count)+
+  scale_y_continuous(limits=c(0,1000))
+```
+Or rather,
+```{r}
+qplot(geom='boxplot', data=subset(pf,!is.na(gender)),
+      x=gender,
+      y=friend_count)+
+  coord_cartesian(ylim=c(0,1000))
+```
+Observe: notice that the female box has moved closer to 250 in comparison to the other.
+We can further adjust this as follows: 
+```{r}
+qplot(geom='boxplot', data=subset(pf,!is.na(gender)),
+      x=gender,
+      y=friend_count)+
+  coord_cartesian(ylim=c(0,250))
+```
+
+Now compute a summary
+```{r}
+by(pf$friend_count,pf$gender,summary)
+```
+
+#Friendship Initiated 
+Now we begin analyzing friendships initated by gender.
+Consdier the following plots
+```{r}
+qplot(x=gender, y=friendships_initiated,data=subset(pf,!is.na(gender)),geom='boxplot')+
+  coord_cartesian(ylim=c(0,150))
+```
+We now compute a numerical summary. 
+```{r}
+by(pf$friendships_initiated,pf$gender,summary)
+```
+
+To check if people use mobile check is use booleans as follows
+
+```{r}
+summary(pf$mobile_likes)
+summary(pf$mobile_likes>0)
+pf$mobile_check_in<-NA
+pf$mobile_check_in<-ifelse(pf$mobile_likes>0,1,0)
+pf$mobile_check_in<-factor(pf$mobile_check_in)
+summary(pf$mobile_check_in)
+sum(pf$mobile_check_in==1)/length(pf$mobile_check_in)
+```
+This tells us that `mobile_check_in`
+
+#QUIZ EXPLORE SINGLE VARIABLE 
+To begin we will load the necessary packages and library 
+
+```{r}
+library(ggplot2)
+data(diamonds)
+summary(diamonds)
+```
+
+
+Notice that three of the variables have a well defined order.
+
+Summarizing the data we have
+
+```{r}
+summary(diamonds$price)
+sum(ifelse(diamonds$price>=15000,1,0))
+ggplot(aes(x = price), data = diamonds) +
+  geom_histogram(binwidth = 20, color = 'black', fill = '#099DD9')+
+  scale_x_continuous(limits=c(0,1500))
+```
+
+Now we price by cut (this ought to be useful)
+I'm not sure what else I computed here, but reading through might make things more apparent. 
+```{r}
+ggplot(aes(x = price),data = diamonds) +
+  geom_histogram() +
+  scale_x_continuous() +
+  facet_wrap(~cut, scales="free_y")
+
+by(diamonds$price,diamonds$cut,summary)
+summary(diamonds)
+
+ggplot(aes(x = log10(price/carat)),data = diamonds) +
+  geom_histogram() +
+  scale_x_continuous() +
+  facet_wrap(~cut, scales="free_y")
+
+qplot(geom='boxplot', data=diamonds,
+      x=color,
+      y=price/carat) +
+  coord_cartesian( ylim=c(0,7000))
+
+
+by(diamonds$price,diamonds$color,IQR)
+?diamonds
+
+
+qplot(x=price, data=diamonds, binwidth=40, geom='freqpoly', color=color)
+
+qplot(data=diamonds,x=carat, geom = 'freqpoly',binwidth=0.1, color=carat)+
+  scale_x_continuous(breaks = seq(0,3,0.1),lim= c(0,3))+
+  scale_y_continuous(breaks = seq(2000,10000,1000))
+```
+I'm not sure what I did above!
+
+With the diamonds dataset questions complete, I will now begin analyzing the unemployment dataset I found on mindgapper or whatever database.
+Switching the working directory again, for sanity
+```{r}
+setwd('~/Documents/exploratory-data-analysis')
+library(tidyr)
+gdp <- read.csv("GDP.csv", header=T, check.names = F)
+
+gdp.T <- gather(data=gdp, key='Year', value='GDP', '1960':'2011',convert = TRUE)
+range(gdp.T$Year)
+
+
+hiv <- read.csv("HIV.csv", header=T, check.names = F)
+hiv.T <- gather(data=hiv, key='Year', value='HIV_prev', '1979':'2011', convert = TRUE)
+hiv.T$HIV_prev <- as.numeric(hiv.T$HIV_prev)
+
+summary(hiv.T)
+
+gdp.HIV <- merge(gdp.T, hiv.T)
+str(gdp.HIV)
+
+summary((is.na(gdp.HIV$GDP)) / nrow(gdp.HIV) * 100)
+summary(gdp.HIV$GDP)
+summary(gdp.HIV$HIV_prev)
+qplot(y=gdp.HIV$`Income per person (fixed 2000 US$)`,x=gdp.HIV$GDP, data=gdp.HIV, xlim = c(0,4500))
+```
+
+The goal here is to analyze how a country's `GDP` and `HIV` prevalence are related 
+
+# SECTION 5
+Loading the relevant library again.
+```{r}
+library(ggplot2)
+pf<-read.csv('pseudo_facebook.tsv', sep='\t')
+```
+I read in the `pseudo_facebook` for sanity, too. 
+
+#Exploring the relationship between two cont. variables.
+
+The code below creates a scatterplot of `age (years)` vs `friend_count`
+```{r}
+qplot(x=age,y=friend_count,data=pf)
+```
+Or identically
+```{r}
+qplot(age,friend_count,data=pf)
+```
+
+Several obervations:
+peaks in the `0-30` range, several peaks `~65-70` (at `69` to be specific) and `100<`
+
+From here on we will switch to `ggplot` syntax, allowing for more robust plots.
+
+```{r}
+ggplot(aes(x=age, y=friend_count),data=pf)+geom_point()+xlim(13,90)
+```
+Question: computationally, is one of these faster than the other?
+
+Several attributes of `ggplot`
+geom=chart type. look at reference.
+aes wrapper - aesthetic wrapper. 
+The `summary` of `age` variable of `pf` dataset
+```{r}
+summary(pf$age)
+```
+
+Note that we added the extra x lim layer since we want to cut the data down a little bit. 
+Overplotting= makes it difficult to see how many points are in a certain area. 
+Using the alpha proerty of geom_point() we can adjust the transparency. 1/20 means it takes 20 points to appear as one appoint. 
+```{r}
+ggplot(aes(x=age, y=friend_count),data=pf)+
+  geom_point(alpha=1/20)+
+  xlim(13,90)
+```
+
+Now we add jitter, which adds noise to a variable of the data set. In this case, we will add jitter to `age`(?).
+```{r}
+ggplot(aes(x=age, y=friend_count),data=pf)+
+  geom_jitter(alpha=1/20)+
+  xlim(13,90)
+```
+Adding jitter makes sense since we were given that age as an integer, when in reality it ought to be a continous variable. 
+
+Now we add a transformation to the y axis, so that we may change the friend count scale.
+```{r}
+ggplot(aes(x=age, y=friend_count),data=pf)+
+  geom_point(alpha=1/20, position=position_jitter(h=0))+
+  xlim(13,90)+
+  coord_trans(y = "sqrt")
+```
+Notice that I had to add the `position_jitter(h=0)`, so that we do not get negative values. Otherwise, we will get an error.
+Think of the friend count conditioned on age now. 
+
+Exploring the relationship between friends initiated vs age.range
+```{r}
+ggplot(aes(x=age, y=friendships_initiated),data=pf)+
+  geom_point(alpha=1/10, position=position_jitter(h=1))+
+   xlim(13,90)
+```
+
+#Exploring conditional means and relationship between two or more variables.
+First we install `dplyr` library, and group by age to create a new data frame. 
+```{r}
+#install.packages('dplyr')
+library(dplyr)
+age_groups<-group_by(pf,age)
+pf.fc_by_age<-summarise(age_groups, friend_count_mean=mean(friend_count), friend_count_median=median(friend_count),n=n())
+```
+This yields a new data frame
+
+```{r}
+pf.fc_by_age<-arrange(pf.fc_by_age,age)
+```
+This arranges the frame by age in decending order(?)
+```{r}
+head(pf.fc_by_age)
+```
+This yields the first few rows of the data frame.
+
+#AN ALTERNATE WAY TO GET THE SAME TABLE
+
+Just use the original data set as follows
+```{r}
+pf.fc_by_age<-pf %>%
+  group_by(age) %>%
+  summarise(friend_count_mean=mean(friend_count),
+            friend_count_median=median(friend_count),
+            n=n()) %>%
+  arrange(age)
+```  
+  `%>%` is called the matching operator (?)
+  chains functions onto data set
+  the matching operator is part of the `dplyr` package
+```{r}
+head(pf.fc_by_age)
+```
+
+
+#PROJECT: PLOT TABLE OF AVERAGES FC vs AGE
+Recall the following plot 
+```{r}
+ggplot(aes(x=friend_count_mean,y=age),data=pf.fc_by_age)+geom_point()
+```
+
+Or with the line geometry 
+```{r}
+ggplot(aes(y=friend_count_mean,x=age),data=pf.fc_by_age)+geom_line()
+```
+
+USING GGPLOT TO SUMMARISE DATA
+First we compute the first scatter plot, then use the additional layer `geom_line(summary, ....)` to 
+
+```{r}
+ggplot(aes(x=age,y=friend_count),data=pf)+
+  xlim(13,90)+
+  geom_point(alpha=0.05,position=position_jitter(h=0),
+             color='orange')+
+  coord_trans(y='sqrt')+
+  geom_line(stat="summary",fun.y=mean)+
+  geom_line(stat="summary", fun.y=quantile, fun.args=list(probs=0.1),color='blue',linetype=2)+
+  geom_line(stat="summary", fun.y=quantile, fun.args=list(probs=0.5),color='blue')+
+  geom_line(stat="summary", fun.y=quantile, fun.args=list(probs=0.9),color='blue',linetype=2)
+```  
+This plots show us that most of the younger users do NOT have more than 2000 friends.
+dashed lines (`linetype=2`) are the 10th, 50th, and 90th percentiles.
+
+Reanalyzing, if we remove the xlim and coodr_trans layers, and replace them with the coord_cart() function
+we can analyze 
+
+```{r}
+ggplot(aes(x=age,y=friend_count),data=pf)+
+  coord_cartesian(xlim=c(13,70), ylim=c(0,1000))+
+  geom_point(alpha=0.05,position=position_jitter(h=0),
+             color='orange')+
+  geom_line(stat="summary",fun.y=mean,color='red')+
+  geom_line(stat="summary", fun.y=quantile, fun.args=list(probs=0.1),color='blue',linetype=2)+
+  geom_line(stat="summary", fun.y=quantile, fun.args=list(probs=0.5),color='blue',linetype=2)+
+  geom_line(stat="summary", fun.y=quantile, fun.args=list(probs=0.9),color='blue',linetype=2)
+```
+INTERPRETATIONS OF THIS PLOT: It is very rare to have more than 800 friends 
+
+
+# STUDYING CORRELATION
+The `cor.test` function yields the correlation coefficent with a given confidence level (`conf.level`).
+```{r}
+cor.test(x=pf$age,y=pf$friend_count, method="pearson", conf.level = 0.95)
+with(pf,cor.test(age,friend_count,method='pearson'))
+```
+Notice that the corellation coefficent is very very small in this particular pair of variables (`pf$age`,`pf$friend_count`).
+
+Next we analyze the correlation coeff for subsets of the data so that we can only consider the range 13-70.
+
+Consider the following code
+```{r}
+with(subset(pf,age<68),cor.test(age,friend_count,method='pearson'))
+```
+Note: `cor.test` uses pearson by default. 
+
+Measuring strength of increasing or decreasing, i.e. rank.
+
+#CREATING SCATTER POINTS
+
+```{r}
+ggplot(data = pf,aes(x = www_likes_received, y = likes_received)) +
+  geom_point(alpha=1/20)+
+  xlim(0,quantile(pf$www_likes_received,0.95))+
+  ylim(0,quantile(pf$likes_received,0.95))+
+  geom_smooth(method = 'lm', color="red")
+```
+We can check to see how strong the relationship is by using the `with` and `cor.test` functions.
+```{r}
+with(pf,cor.test(www_likes_received,likes_received,method='pearson'))
+qqplot(x=pf$www_likes_received,y=pf$likes_received)
+```
+Notice that the distribution looks approx. normal, so the regression is valid. Also, we are appealing to the WLLN.
+
+# Date: 24.7.18
+
+Here is a new package to work with 
+```{r}
+#install.packages('alr3')
+library(alr3)
+data("Mitchell")
+```
+With this data set we will create a new scatter plot:
+```{r}
+ggplot(data=Mitchell, aes(x=Month,y=Temp))+geom_point()
+```
+Notice this doesn't look like the two variables are even correlated this observation is coroborated by the following computation.
+```{r}
+with(Mitchell,cor.test(Month,Temp,method='pearson'))
+```
+We want to break up the months into 12 month intervals, which we can do as follows.
+```{r}
+ggplot(data=Mitchell, aes(x=Month,y=Temp))+
+  geom_point()+
+  scale_x_continuous(breaks=seq(0,203,12))+
+  geom_line()
+```
+Notice that if we stretch the plot, then the plot reveals a sinusoidal pattern. 
+Q: Is there any way to add a curve layer? Yes, add a `geom_line` layer as above.
+
+
+#NOISE
+
+Now we return to the original mean friend count data.
+Recall the following graph
+```{r}
+p1<-ggplot(aes(y=friend_count_mean,x=age),data=subset(pf.fc_by_age,age<71))+
+  geom_line()+
+  geom_smooth()
+
+head(pf.fc_by_age,10)
+pf.fc_by_age[17:19,]
+```
+By scaling the data appropriately, the conditional mean for age by months is given by
+```{r}
+pf$age_with_months<-pf$age+(12-pf$dob_month)/12
+head(pf$age_with_months)
+summary(pf$age_with_months)
+```
+Once again, we use `dplyr` again to chain functions
+```{r}
+pf.fc_by_age_months<-pf %>%
+  group_by(age_with_months) %>%
+  summarise(friend_count_mean=mean(friend_count),
+            friend_count_median=median(friend_count),
+            n=n()) %>%
+  arrange(age_with_months)
+head(pf.fc_by_age_months)
+```
+Now we have age with months means, so that we can determine the conditional means 
+
+Now I will create a plot of the average friend count with ages measured in months.
+I will also subset the data so that the we only look at the ages less than 71.
+This analysis will show us how noise and bin width appear in the data+plots.
+
+```{r}
+p2<-ggplot(aes(y=friend_count_mean,x=age_with_months),data=subset(pf.fc_by_age_months, age_with_months<71))+
+  geom_line()+
+  geom_smooth()
+library(gridExtra)
+grid.arrange(p1,p2,ncol=1)
+```
+Notice that when grouped by months there is a lot of noise in the graph. We can filter this data even further. Consider the following filter
+
+```{r}
+p3<-ggplot(aes(y=friend_count,x=round(age/5)*5),data=subset(pf, age<71))+
+  geom_line(stat = 'summary',fun.y=mean)+
+  geom_smooth()
+grid.arrange(p1,p2,p3,ncol=1)
+```
+ Bias-Variance trade off
+
+How do these plots communicate the finding s of this particular analysis? 
+
+#LESSON 6: 
+To begin this lesson, create a scatterplot of price vs x. using the ggplot syntax.
+
+```{r}
+library(ggplot2)
+data(diamonds)
+ggplot(data=diamonds, aes(x=price,y=x))+
+  geom_point(alpha=1/10,color='orange')
+
+```
+
+Now the correlation between `price`,`x`,`y`, and `z` respectively.  
+
+```{r}
+with(diamonds,cor.test(price,x,method='pearson'))
+with(diamonds,cor.test(price,y,method='pearson'))
+with(diamonds,cor.test(price,z,method='pearson'))
+
+```
+
+
+Next up, I'll create a simple scatter plot of price vs depth.
+
+Doing so yields
+
+```{r}
+ggplot(data=diamonds,aes(x=price,y=depth))+geom_point()
+```
+
+
+
+Change the code to make the transparency of the points to be 1/100 of what they are now and mark the x-axis every 2 units. See the instructor notes for two hints.
+
+```{r}
+ggplot(data = diamonds, aes(x = price, y = depth)) + 
+  geom_point(alpha=1/100)+
+  scale_y_continuous(breaks=seq(0,max(range(diamonds$depth)),2))
+
+```
+We see the range for depth of the diamonds is
+```{r}
+range(diamonds$depth)
+```
+Now we compute the correlation coeff. between depth vs. price
+
+```{r}
+with(diamonds,cor.test(depth,price,method='pearson'))
+
+```
+
+Create a scatterplot of price vs carat and omit the top 1% of price and carat values.
+```{r}
+#ggplot(data=diamonds, aes(x=price,y=carat))+geom_point(alpha=1/100)
+ggplot(data=subset(diamonds,price<quantile(price,probs=1/100)),aes(x=price,y=carat))+
+ geom_point()
+
+```
+
+
+
+Create a scatterplot of price vs. volume (`x * y * z`).This is a very rough approximation for a diamond's volume. Create a new variable for volume in the diamonds data frame.This will be useful in a later exercise.
+
+```{r}
+diamonds$volume<-(diamonds$x)*(diamonds$y)*(diamonds$z)
+```
+Now plotting 
+
+```{r}
+ggplot(data=subset(diamonds, volume<800 & volume>0), aes(x=price,y=volume))+
+  geom_point(alpha=1/20)
+  # geom_point(alpha=0.05,position=position_jitter(h=0),
+  #            color='orange')+
+  # geom_line(stat="summary",fun.y=mean,color='red')+
+  # geom_line(stat="summary", fun.y=quantile, fun.args=list(probs=0.1),color='blue',linetype=2)+
+  # geom_line(stat="summary", fun.y=quantile, fun.args=list(probs=0.5),color='blue',linetype=2)+
+  # geom_line(stat="summary", fun.y=quantile, fun.args=list(probs=0.9),color='blue',linetype=2)
+```
+
+```{r}
+# library(dplyr)
+# count(diamonds$volume == 0)
+```
+Next we compute the correlation coefficent for `price` v. `volume` with `0<volume<800`.
+
+```{r}
+with(subset(diamonds,volume <800 & 0<volume),cor.test(price,volume,method='pearson'))
+
+
+```
+
+Next we will subset the data to exclude diamonds with a volume greater than or equal to 800. Also, exclude diamonds with a volume of 0. Adjust the transparency of the points and add a linear model to the plot.
+
+Note that I already did this above. 
+```{r}
+ggplot(data=subset(diamonds, volume<800 & volume>0), aes(x=price,y=volume))+
+  geom_point(alpha=1/20)+
+  geom_smooth(method = 'lm', color="red")
+
+```
+
+
+Use the function `dplyr` package to create a new data frame containing info on diamonds by clarity. Name the data frame diamondsByClarity The data frame should contain the following variables in this order.
+###       (1) mean_price
+###       (2) median_price
+###      (3) min_price
+###       (4) max_price
+###       (5) n
+
+where n is the number of diamonds in each level of clarity.
+
+```{r}
+library(dplyr)
+diamondsByClarity<-diamonds %>%
+  group_by(clarity) %>%
+  summarise(mean_price=mean(price),
+            median_price=median(price),
+            min_price=min(price),
+            max_price=max(price),
+            n=n()) 
+head(diamondsByClarity)
+```
+
+Notice that in the code above in order for the `clarity` structure to be maintained we had to use the `group_by()` function. 
+
+We’ve created summary data frames with the mean price by clarity and color. You can run the code in R to verify what data is in the variables `diamonds_mp_by_clarity` and `diamonds_mp_by_color`. Your task is to write additional code to create two bar plots on one output image using the grid.arrange() function from the package gridExtra.
+
+Below are the variables defined above 
+
+```{r}
+diamonds_by_clarity <- group_by(diamonds, clarity)
+diamonds_mp_by_clarity <- summarise(diamonds_by_clarity, mean_price = mean(price))
+
+diamonds_by_color <- group_by(diamonds, color)
+diamonds_mp_by_color <- summarise(diamonds_by_color, mean_price = mean(price))
+```
+Using these new data frames, we can create the bar plots as follow: 
+```{r}
+p1 <- ggplot(diamonds_mp_by_color, aes(x = color, y = mean_price)) + geom_col()
+p2 <- ggplot(diamonds_mp_by_clarity, aes(x = clarity, y = mean_price)) + geom_col()
+
+
+library(gridExtra)
+grid.arrange(p1,p2,ncol=1)
+```
+
+
+#GAPMINDER, CONT.
+Here is a good chance to mess with the F1 data set
+
+
+Here is what Udacity suggests for the problem: 
+The Gapminder website contains over 500 data sets with information about the world's population. Your task is to continue the investigation you did at the end of Problem Set 3 or you can start fresh and choose a different data set from Gapminder. If you’re feeling adventurous or want to try some data munging see if you can find a data set or scrape one from the web.
+In your investigation, examine pairs of variable and create 2-5 plots that make use of the techniques from Lesson 4. You can find a link to the Gapminder website in the Instructor Notes.
+
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+gdp<-read.csv("gdppercapita.csv",header = T, check.names = F)
+tax<-read.csv("tax.csv",header = T, check.names = F)
+
+gdp.T <- gather(data=gdp, key='Year', value='GDP Per Capita', '1960':'2016',convert = TRUE)
+str(gdp.T)
+tax.T<-gather(data=tax, key='Year', value='Percent of GDP', '1972':'2016', convert=TRUE)
+str(tax.T)
+
+
+gdp.tax<-merge(gdp.T,tax.T)
+gdp.tax <- subset(gdp.tax, `GDP Per Capita`!="" & `Percent of GDP`!="" )
+str(gdp.tax)
+#Remove missing data. I'm not sure if this is the best idea.
+summary(gdp.tax$`GDP Per Capita`)
+summary(gdp.tax$`Percent of GDP`)
+
+ggplot(data=subset(gdp.tax, geo=="United States"), aes(x=`Percent of GDP`, y=`GDP Per Capita`))+
+  geom_point()
+  
+ggplot(data=subset(gdp.tax, geo))
+US.gdp.tax<-subset(gdp.tax, geo=="United States")
+
+ggplot(data=US.gdp.tax, aes(x=`Percent of GDP`,y=`GDP Per Capita`))+
+  geom_line()
+
+ggplot(data=gdp.tax,aes(x=`Percent of GDP`,y=`GDP Per Capita`))+
+  geom_boxplot()
+
+```
+
+
+
+```{r}
+
+```
+
+
+#LESSON 7 - 25.7.18
+
+## Appendix Code
+```{r, ref.label=knitr::all_labels(),echo=TRUE,eval=FALSE}
+
+```
